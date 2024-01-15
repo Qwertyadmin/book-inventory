@@ -1,9 +1,10 @@
-import React, { ChangeEvent, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { gapi } from 'google-api-javascript-client';
 import { ErrorTokenResponse, GoogleOAuthProvider, SuccessTokenResponse } from 'google-oauth-gsi';
-import { Alert, Autocomplete, AutocompleteInputChangeReason, Button, TextField } from '@mui/material';
+import { Alert, Autocomplete, Button, TextField } from '@mui/material';
 import { Google } from '@mui/icons-material';
 import { LoadedSheet, updateSheet } from '../App';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthProps {
     obtainedToken: SuccessTokenResponse | undefined,
@@ -32,6 +33,8 @@ const Auth: React.FC<AuthProps> = (props) => {
 
   const [spreadsheets, setSpreadsheets] = useState<Spreadsheet[]>([{id: '', label: ''}]);
   const [spreadsheet, setSpreadsheet] = useState<Spreadsheet | null>({id: '', label: ''});
+
+  const navigate = useNavigate();
 
 
   gapi.load('client', () => {
@@ -94,6 +97,12 @@ const Auth: React.FC<AuthProps> = (props) => {
     })
   }
 
+  const handleClick = () => {
+    if (spreadsheet?.id !== '')
+      createSpreadsheet();
+    navigate('/scan');
+  }
+
 
   return (
     <div>
@@ -108,7 +117,7 @@ const Auth: React.FC<AuthProps> = (props) => {
             autoSelect
             disabled={loginState !== 1 ? true : false}
             options={spreadsheets as Spreadsheet[]} 
-            renderInput={(params) => <TextField {...params} label="Seleziona un file esistente..." />}
+            renderInput={(params) => <TextField {...params} label="Seleziona un file esistente o inserisci il nome del nuovo file" />}
             value={spreadsheet}
             onChange={(event: any, newValue) => {
               if (typeof newValue === 'string') {
@@ -125,9 +134,10 @@ const Auth: React.FC<AuthProps> = (props) => {
                 setSpreadsheet(newValue);
               }
             }} />
+        <Alert severity='warning'>Seleziona solo file creati dall'applicazione</Alert>
         <p>ID: {spreadsheet?.id}</p>
         <p>NAME: {spreadsheet?.label}</p>
-        <Button onClick={createSpreadsheet} variant='contained'>{spreadsheet?.id === '' ? 'Crea file' : 'Seleziona file'}</Button>
+        <Button onClick={handleClick} variant='contained'>{spreadsheet?.id !== '' ? 'Seleziona file' : 'Crea file'}</Button>
     </div>
   );
 }
