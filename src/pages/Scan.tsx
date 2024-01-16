@@ -1,4 +1,3 @@
-import { SuccessTokenResponse } from "google-oauth-gsi";
 import { Button, TextField } from "@mui/material";
 import { BarcodeScanner } from "../components/BarcodeScanner";
 import { useNavigate } from "react-router-dom";
@@ -15,8 +14,8 @@ const Scan: React.FC<ScanProps> = (props) => {
     return (
         <div>
             <BarcodeScanner result={props.code} setResult={props.setCode}/>
-            <TextField label='Inquadra il codice o scrivi qui' value={props.code} onChange={(e) => props.setCode(e.target.value)}/>
-            <Button variant="contained" onClick={() => {navigate('/book')}}>Cerca libro</Button>
+            <TextField label='Inquadra il codice o scrivi qui' value={props.code} onChange={(e) => props.setCode(e.target.value)} margin="dense" fullWidth/>
+            <Button variant="contained" onClick={() => {navigate('/book')}} fullWidth>Cerca libro</Button>
         </div>
     );
 }

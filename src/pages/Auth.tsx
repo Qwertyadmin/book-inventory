@@ -1,16 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { MutableRefObject, useEffect, useState } from 'react';
 import { gapi } from 'google-api-javascript-client';
 import { ErrorTokenResponse, GoogleOAuthProvider, SuccessTokenResponse } from 'google-oauth-gsi';
-import { Alert, Autocomplete, Button, TextField } from '@mui/material';
+import { Alert, Button } from '@mui/material';
 import { Google } from '@mui/icons-material';
 import { LoadedSheet, updateSheet } from '../App';
 import { useNavigate } from 'react-router-dom';
+import FileSelector, { Spreadsheet } from '../components/FileSelector';
 
 interface AuthProps {
-    obtainedToken: SuccessTokenResponse | undefined,
-    setObtainedToken: (obtainedToken: SuccessTokenResponse) => void,
-    loadedSheet: LoadedSheet | undefined,
-    setLoadedSheet: (loadedSheet: LoadedSheet) => void
+    obtainedToken: MutableRefObject<SuccessTokenResponse>,
+    loadedSheet: MutableRefObject<LoadedSheet>
 }
 
 interface GSpreadsheet {
@@ -18,12 +17,6 @@ interface GSpreadsheet {
     kind: string,
     mimeType: string,
     name: string
-}
-
-interface Spreadsheet {
-    id: string,
-    label: string,
-    inputValue?: string
 }
 
 const Auth: React.FC<AuthProps> = (props) => {
@@ -50,7 +43,7 @@ const Auth: React.FC<AuthProps> = (props) => {
     googleProvider.useGoogleLogin({
         flow: 'implicit',
         onSuccess(tokenResponse) {
-          props.setObtainedToken(tokenResponse);
+          props.obtainedToken.current = tokenResponse;
           setLoginState(1);
         },
         onError(errorResponse) {
@@ -63,20 +56,19 @@ const Auth: React.FC<AuthProps> = (props) => {
 
 
   useEffect(() => {
-    if (props.obtainedToken) {
+    if (props.obtainedToken.current.access_token !== '') {
       gapi.client.request({
         path: 'https://www.googleapis.com/drive/v3/files',
         method: 'GET',
         params: {
             includeItemsFromAllDrives: false,
-            trashed: false,
-            q: "mimeType='application/vnd.google-apps.spreadsheet'"
+            q: "mimeType='application/vnd.google-apps.spreadsheet' and trashed=false"
         }
       }).then(r => {
           setSpreadsheets(r.result.files.map((f: GSpreadsheet) => {return {label: f.name, id: f.id}}));
       });
     }
-  }, [props.obtainedToken]);
+  }, [props.obtainedToken.current]);
 
 
   const createSpreadsheet = () => {
@@ -92,14 +84,25 @@ const Auth: React.FC<AuthProps> = (props) => {
         }
     }).then(r => { 
       setSpreadsheet({id: r.result.spreadsheetId, label: r.result.properties.title});
-      props.setLoadedSheet({id: r.result.spreadsheetId, row: 3});
-      updateSheet(['Titolo', 'Autori', 'Editore', 'Anno pubblicazione', 'ISBN'], {id: r.result.spreadsheetId, row: 3}, props.setLoadedSheet);
+      props.loadedSheet.current = {id: r.result.spreadsheetId, row: 3};
+      updateSheet(['Titolo', 'Autori', 'Editore', 'Anno pubblicazione', 'ISBN'], props.loadedSheet);
+    })
+  }
+
+  const loadSpreadsheet = () => {
+    gapi.client.request({
+      path: `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheet?.id}/values/A1`,
+      method: 'GET'
+    }).then(r => {
+      props.loadedSheet.current = {id: spreadsheet?.id, row: r.result.values[0][0] as number}
     })
   }
 
   const handleClick = () => {
-    if (spreadsheet?.id !== '')
+    if (spreadsheet?.id === '')
       createSpreadsheet();
+    else
+      loadSpreadsheet();
     navigate('/scan');
   }
 
@@ -110,14 +113,14 @@ const Auth: React.FC<AuthProps> = (props) => {
         <Button onClick={handleLogin} variant='contained' startIcon={<Google />}>Accedi</Button>
         {loginState === 1 && <Alert severity='success'>Login effettuato con successo</Alert>}
         {loginState === 2 && <Alert severity='error'>ERRORE: {loginError?.error}</Alert>}
-        <Autocomplete 
+        {/* <Autocomplete 
             id='spreadsheets-combo' 
             disablePortal
             freeSolo
             autoSelect
             disabled={loginState !== 1 ? true : false}
             options={spreadsheets as Spreadsheet[]} 
-            renderInput={(params) => <TextField {...params} label="Seleziona un file esistente o inserisci il nome del nuovo file" />}
+            renderInput={(params) => <TextField {...params} label="Seleziona un file esistente o inserisci il nome del nuovo file" margin='dense' fullWidth />}
             value={spreadsheet}
             onChange={(event: any, newValue) => {
               if (typeof newValue === 'string') {
@@ -133,7 +136,8 @@ const Auth: React.FC<AuthProps> = (props) => {
               } else {
                 setSpreadsheet(newValue);
               }
-            }} />
+            }} /> */}
+        <FileSelector spreadsheet={spreadsheet} setSpreadsheet={setSpreadsheet} spreadsheets={spreadsheets} loginState={loginState} />
         <Alert severity='warning'>Seleziona solo file creati dall'applicazione</Alert>
         <p>ID: {spreadsheet?.id}</p>
         <p>NAME: {spreadsheet?.label}</p>

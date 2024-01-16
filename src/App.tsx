@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { MutableRefObject, useRef, useState } from 'react';
 import { SuccessTokenResponse } from 'google-oauth-gsi';
 import Auth from './pages/Auth';
 import { Route, Routes } from 'react-router-dom';
@@ -11,18 +11,19 @@ export interface LoadedSheet {
   row: number
 }
 
-export const updateSheet = (data: string[], loadedSheet: LoadedSheet | undefined, setLoadedSheet: (loadedSheet: LoadedSheet) => void) => 
+export const updateSheet = (data: string[], loadedSheet: MutableRefObject<LoadedSheet>) => {
+  let row = loadedSheet.current.row;
   gapi.client.request({
-    path: `https://sheets.googleapis.com/v4/spreadsheets/${loadedSheet?.id}/values:batchUpdate`,
+    path: `https://sheets.googleapis.com/v4/spreadsheets/${loadedSheet.current.id}/values:batchUpdate`,
     method: 'POST',
     body: {
       data: [
         {
           range: 'A1',
-          values: [[loadedSheet !== undefined ? loadedSheet.row + 1 : 1]]
+          values: [[++row]]
         },
         {
-          range: `A${loadedSheet?.row}:E${loadedSheet?.row}`,
+          range: `A${loadedSheet.current.row}:E${loadedSheet.current.row}`,
           values: [data]
         }
       ],
@@ -30,30 +31,29 @@ export const updateSheet = (data: string[], loadedSheet: LoadedSheet | undefined
       valueInputOption: 'USER_ENTERED'
     }
   }).then(r => 
-    setLoadedSheet({...loadedSheet, row: r.result.responses[0].updatedData.values[0][0] as number})
+    loadedSheet.current = {...loadedSheet.current, row: r.result.responses[0].updatedData.values[0][0] as number}
   );
+}
 
 
 
 function App() {
 
-  const [obtainedToken, setObtainedToken] = useState<SuccessTokenResponse>();
-  const [loadedSheet, setLoadedSheet] = useState<LoadedSheet>();
+  const obtainedToken = useRef<SuccessTokenResponse>({access_token: '', expires_in: 0, prompt: '', token_type: '', scope: ''});
+  const loadedSheet = useRef<LoadedSheet>({id: '', row: 1});
   const [code, setCode] = useState<string>('');
 
   return (
     <Routes>
       <Route path='/' element={<Auth 
         obtainedToken={obtainedToken} 
-        setObtainedToken={setObtainedToken}
-        loadedSheet={loadedSheet}
-        setLoadedSheet={setLoadedSheet} ></Auth>} />
+        loadedSheet={loadedSheet} ></Auth>} />
       <Route path='/scan' element={<Scan
         code={code}
         setCode={setCode} ></Scan>} />
       <Route path='/book' element={<Book
         obtainedToken={obtainedToken}
-        setObtainedToken={setObtainedToken}
+        loadedSheet={loadedSheet}
         code={code}
         setCode={setCode} ></Book>} />
     </Routes>
