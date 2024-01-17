@@ -1,4 +1,3 @@
-import { FC, useState } from "react";
 import { useZxing } from "react-zxing";
 
 interface BarcodeScannerProps {
