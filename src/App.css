@@ -1,3 +1,11 @@
 video {
   width: 100%;
 }
+
+.materialButton {
+  margin-top: 10px !important;
+}
+
+.materialBox {
+  margin: 0px 5px;
+}

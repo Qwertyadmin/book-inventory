@@ -1,7 +1,7 @@
 import React, { MutableRefObject, useEffect, useState } from 'react';
 import { gapi } from 'google-api-javascript-client';
 import { ErrorTokenResponse, GoogleOAuthProvider, SuccessTokenResponse } from 'google-oauth-gsi';
-import { Alert, Button } from '@mui/material';
+import { Alert, Backdrop, Box, Button, CircularProgress, Snackbar } from '@mui/material';
 import { Google } from '@mui/icons-material';
 import { LoadedSheet, updateSheet } from '../App';
 import { useNavigate } from 'react-router-dom';
@@ -23,6 +23,7 @@ const Auth: React.FC<AuthProps> = (props) => {
 
   const [loginState, setLoginState] = useState(0);
   const [loginError, setLoginError] = useState<ErrorTokenResponse>();
+  const [open, setOpen] = useState(false);
 
   const [spreadsheets, setSpreadsheets] = useState<Spreadsheet[]>([{id: '', label: ''}]);
   const [spreadsheet, setSpreadsheet] = useState<Spreadsheet | null>({id: '', label: ''});
@@ -40,15 +41,18 @@ const Auth: React.FC<AuthProps> = (props) => {
   const googleProvider = new GoogleOAuthProvider({clientId: process.env.REACT_APP_CLIENT_ID as string});
 
   const handleLogin = () => {
+    setOpen(true);
     googleProvider.useGoogleLogin({
         flow: 'implicit',
         onSuccess(tokenResponse) {
           props.obtainedToken.current = tokenResponse;
           setLoginState(1);
+          setOpen(true);
         },
         onError(errorResponse) {
           setLoginError(errorResponse);
           setLoginState(2);
+          setOpen(true);
         },
         scope: process.env.REACT_APP_SCOPES
       })();
@@ -89,6 +93,7 @@ const Auth: React.FC<AuthProps> = (props) => {
     })
   }
 
+
   const loadSpreadsheet = () => {
     gapi.client.request({
       path: `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheet?.id}/values/A1`,
@@ -97,6 +102,7 @@ const Auth: React.FC<AuthProps> = (props) => {
       props.loadedSheet.current = {id: spreadsheet?.id, row: r.result.values[0][0] as number}
     })
   }
+
 
   const handleClick = () => {
     if (spreadsheet?.id === '')
@@ -107,42 +113,33 @@ const Auth: React.FC<AuthProps> = (props) => {
   }
 
 
+  const handleClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setOpen(false);
+  };
+
+
   return (
-    <div>
+    <Box className='materialBox'>
+        <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={loginState === 0 && open}>
+          <CircularProgress color="inherit" />
+        </Backdrop>
         <h1>Book Inventory</h1>
-        <Button onClick={handleLogin} variant='contained' startIcon={<Google />}>Accedi</Button>
-        {loginState === 1 && <Alert severity='success'>Login effettuato con successo</Alert>}
-        {loginState === 2 && <Alert severity='error'>ERRORE: {loginError?.error}</Alert>}
-        {/* <Autocomplete 
-            id='spreadsheets-combo' 
-            disablePortal
-            freeSolo
-            autoSelect
-            disabled={loginState !== 1 ? true : false}
-            options={spreadsheets as Spreadsheet[]} 
-            renderInput={(params) => <TextField {...params} label="Seleziona un file esistente o inserisci il nome del nuovo file" margin='dense' fullWidth />}
-            value={spreadsheet}
-            onChange={(event: any, newValue) => {
-              if (typeof newValue === 'string') {
-                setSpreadsheet({
-                  id: '',
-                  label: newValue,
-                });
-              } else if (newValue && newValue.inputValue) {
-                setSpreadsheet({
-                  id: '',
-                  label: newValue.inputValue,
-                });
-              } else {
-                setSpreadsheet(newValue);
-              }
-            }} /> */}
-        <FileSelector spreadsheet={spreadsheet} setSpreadsheet={setSpreadsheet} spreadsheets={spreadsheets} loginState={loginState} />
-        <Alert severity='warning'>Seleziona solo file creati dall'applicazione</Alert>
-        <p>ID: {spreadsheet?.id}</p>
-        <p>NAME: {spreadsheet?.label}</p>
-        <Button onClick={handleClick} variant='contained'>{spreadsheet?.id !== '' ? 'Seleziona file' : 'Crea file'}</Button>
-    </div>
+        {loginState !== 1 && <Button onClick={handleLogin} disabled={loginState === 1} variant='contained' startIcon={<Google />} fullWidth>Accedi</Button>}
+        <Snackbar open={loginState === 1 && open} onClose={handleClose} autoHideDuration={3000}>
+          <Alert onClose={handleClose} severity='success'>Login effettuato con successo</Alert>
+        </Snackbar>
+        <Snackbar open={loginState === 2 && open} onClose={handleClose} autoHideDuration={3000}>
+          <Alert onClose={handleClose} severity='error'>ERRORE: {loginError?.error}</Alert>
+        </Snackbar>
+        {loginState === 1 && <>
+          <FileSelector spreadsheet={spreadsheet} setSpreadsheet={setSpreadsheet} spreadsheets={spreadsheets} loginState={loginState} />
+          <Alert severity='warning'>Seleziona solo file creati dall'applicazione</Alert>
+          <Button className='materialButton' disabled={spreadsheet === null} onClick={handleClick} variant='contained' fullWidth>{spreadsheet?.id !== '' ? 'Seleziona file' : 'Crea file'}</Button>
+        </>}
+    </Box>
   );
 }
 

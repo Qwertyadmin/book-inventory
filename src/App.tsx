@@ -13,7 +13,7 @@ export interface LoadedSheet {
 
 export const updateSheet = (data: string[], loadedSheet: MutableRefObject<LoadedSheet>) => {
   let row = loadedSheet.current.row;
-  gapi.client.request({
+  return gapi.client.request({
     path: `https://sheets.googleapis.com/v4/spreadsheets/${loadedSheet.current.id}/values:batchUpdate`,
     method: 'POST',
     body: {
@@ -30,9 +30,10 @@ export const updateSheet = (data: string[], loadedSheet: MutableRefObject<Loaded
       includeValuesInResponse: true,
       valueInputOption: 'USER_ENTERED'
     }
-  }).then(r => 
-    loadedSheet.current = {...loadedSheet.current, row: r.result.responses[0].updatedData.values[0][0] as number}
-  );
+  }).then(r => {
+    loadedSheet.current = {...loadedSheet.current, row: r.result.responses[0].updatedData.values[0][0] as number};
+    return r;
+  });
 }
 
 

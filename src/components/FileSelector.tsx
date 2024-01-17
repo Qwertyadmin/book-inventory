@@ -56,6 +56,7 @@ const FileSelector: React.FC<FileSelectorProps> = (props) => {
       selectOnFocus
       clearOnBlur
       handleHomeEndKeys
+      fullWidth
       disabled={props.loginState !== 1 ? true : false}
       options={props.spreadsheets}
       getOptionLabel={(option) => {
@@ -71,10 +72,9 @@ const FileSelector: React.FC<FileSelectorProps> = (props) => {
         return option.label;
       }}
       renderOption={(props, option) => <li {...props}>{option.label}</li>}
-      sx={{ width: 300 }}
       freeSolo
       renderInput={(params) => (
-        <TextField {...params} label="Seleziona un file esistente o inserisci il nome del nuovo file" margin="dense" fullWidth />
+        <TextField {...params} label="Seleziona un file esistente o inserisci il nome del nuovo file" margin="dense" fullWidth/>
       )}
     />
   );
